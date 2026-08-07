@@ -1,0 +1,18 @@
+{
+  "last_cycle": "2026-08-07T20:06:20.174240+00:00",
+  "asset": "BTC/USDT",
+  "price": 64983.3,
+  "rsi": 54.091392136026116,
+  "strategy_version": "01",
+  "entry_fired": false,
+  "reason": "rsi=54.09 vs <= 30.0",
+  "metrics": {
+    "closed_trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "compounded_return": 0.0,
+    "max_drawdown": 0.0,
+    "sharpe": 0.0
+  },
+  "status": "ok"
+}

@@ -1,0 +1,7 @@
+# The worker appends to JSONL and rewrites YAML on Linux CI runners while the
+# repo is also edited on Windows. Force LF everywhere so state files don't
+# accumulate CRLF and break line-oriented parsing.
+* text=auto eol=lf
+*.jsonl text eol=lf
+*.yaml  text eol=lf
+*.sh    text eol=lf

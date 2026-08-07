@@ -1,0 +1,87 @@
+name: trading-worker
+
+# Free-tier deployment. GitHub Actions gives 2,000 min/month on private repos
+# and UNLIMITED minutes on public repos. This job runs a short burst of trading
+# cycles, then commits the resulting state back to the repo — the repo itself
+# is the persistence layer, replacing a paid VM's disk.
+#
+# Cadence note: GitHub's shortest cron is */5, and scheduled runs on a busy
+# runner fleet are frequently delayed or dropped. That is acceptable here — the
+# worker is a paper-trading sampler, not a latency-sensitive execution engine.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:        # manual "Run workflow" button
+    inputs:
+      cycles:
+        description: "Cycles to run this invocation"
+        default: "10"
+      reflect:
+        description: "Force a reflection after trading (true/false)"
+        default: "false"
+
+# Prevent two runs racing to commit state.
+concurrency:
+  group: trading-worker
+  cancel-in-progress: false
+
+permissions:
+  contents: write           # required to commit state back
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Run trading cycles
+        env:
+          HERMES_TRADING_MODE: paper
+          HERMES_TRADING_I_ACCEPT_RISK: "false"
+        run: |
+          uv run python -m hermes_trading.run \
+            --cycles "${{ github.event.inputs.cycles || 10 }}" \
+            --interval 60
+
+      - name: Reflect if enough trades have closed
+        env:
+          REFLECT_FORCED: ${{ github.event.inputs.reflect || 'false' }}
+        run: |
+          CLOSED=$(grep -c . state/trades.jsonl 2>/dev/null || echo 0)
+          EVERY=$(grep -E '^reflection_every:' state/goal.yaml | tr -dc '0-9')
+          EVERY=${EVERY:-5}
+          LAST=$(cat state/.last_reflect_count 2>/dev/null || echo 0)
+          NEW=$((CLOSED - LAST))
+          echo "closed=$CLOSED last_reflect_at=$LAST new=$NEW cadence=$EVERY"
+
+          if [ "$REFLECT_FORCED" = "true" ] || [ "$NEW" -ge "$EVERY" ]; then
+            uv run python -m hermes_trading.reflect --fallback || true
+            echo "$CLOSED" > state/.last_reflect_count
+          else
+            echo "not enough new closed trades — skipping reflection"
+          fi
+
+      - name: Commit state
+        run: |
+          git config user.name  "hermes-trading-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -f state/
+          if git diff --staged --quiet; then
+            echo "no state change"
+          else
+            git commit -m "state: $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+            # Rebase in case a concurrent run landed first.
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+            git push
+          fi

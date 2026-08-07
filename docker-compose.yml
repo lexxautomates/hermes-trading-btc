@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  worker:
+    build: .
+    image: hermes-trading-btc:latest
+    container_name: hermes-trading-btc
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Persist state on the host so redeploys never lose trades/history.
+      - ./state:/app/state
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

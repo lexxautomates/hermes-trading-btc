@@ -1,0 +1,17 @@
+__pycache__/
+.venv/
+.env
+*.pyc
+.worker.pid
+.logs/
+
+# --- IMPORTANT: state is deliberately TRACKED in this repo ---
+# The global excludes file (~/.gitignore_global) ignores agent runtime state
+# everywhere, because normally it's machine-local and git can't be trusted with
+# it. This repo is the exception: it is deployed on GitHub Actions, where the
+# runner is ephemeral and the repo itself is the ONLY persistence layer. If
+# state were ignored here, every scheduled run would start from zero trades.
+#
+# Negation patterns re-include it over the global file.
+!state/
+!state/**
