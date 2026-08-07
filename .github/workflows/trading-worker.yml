@@ -9,7 +9,11 @@ name: trading-worker
 # runner fleet are frequently delayed or dropped. That is acceptable here — the
 # worker is a paper-trading sampler, not a latency-sensitive execution engine.
 
-on:
+# NOTE: "on" is quoted deliberately. In YAML 1.1 a bare `on:` key parses as the
+# boolean True (the "Norway problem", same family as `no` -> False), and GitHub
+# then fails to recognise the file as a workflow at all — it pushes fine and is
+# silently never registered. Keep the quotes.
+"on":
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:        # manual "Run workflow" button
