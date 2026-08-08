@@ -14,8 +14,12 @@ name: trading-worker
 # then fails to recognise the file as a workflow at all — it pushes fine and is
 # silently never registered. Keep the quotes.
 "on":
-  schedule:
-    - cron: "*/15 * * * *"
+  # SCHEDULE DISABLED 2026-08-08. The account billing lock rejects every job at
+  # allocation (3-10s failures), so the only effect of the schedule was a
+  # failure email every 15 minutes. Re-enable by uncommenting once billing is
+  # cleared, or when this repo moves to an unlocked account.
+  # schedule:
+  #   - cron: "*/15 * * * *"
   workflow_dispatch:        # manual "Run workflow" button
     inputs:
       cycles:
